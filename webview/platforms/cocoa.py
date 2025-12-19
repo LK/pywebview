@@ -517,6 +517,11 @@ class BrowserView:
                     
                     if result_holder['value'] == 'no-drag':
                         self._easy_drag_enabled = False
+                        # Forward event directly to WKWebView so web content receives it
+                        for subview in self.subviews():
+                            if hasattr(subview, 'evaluateJavaScript_completionHandler_'):
+                                subview.mouseDown_(event)
+                                return
                     else:
                         windowFrame = window.frame()
                         if windowFrame is None:
