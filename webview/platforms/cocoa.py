@@ -827,10 +827,20 @@ class BrowserView:
         AppHelper.callAfter(self.window.deminiaturize_, self)
 
     def move(self, x, y):
-        flipped_y = self.screen.size.height - y
-        self.window.setFrameTopLeftPoint_(
-            AppKit.NSPoint(self.screen.origin.x + x, self.screen.origin.y + flipped_y)
-        )
+        # Get the current screen the window is on (not the cached self.screen)
+        # This is important for multi-monitor setups where the window may have moved
+        current_screen = self.window.screen()
+        if current_screen:
+            screen_frame = current_screen.frame()
+        else:
+            screen_frame = self.screen  # Fallback to cached screen
+        
+        # x, y are absolute coordinates (matching get_position() return values)
+        # Convert y from top-origin (pywebview API) to Cocoa's bottom-origin
+        # The window's top-left should be at (x, y) in pywebview coordinates
+        # In Cocoa, we need to find where the top-left point is in bottom-origin coords
+        flipped_y = screen_frame.origin.y + screen_frame.size.height - y
+        self.window.setFrameTopLeftPoint_(AppKit.NSPoint(x, flipped_y))
 
     def center(self):
         window_frame = self.window.frame()
