@@ -757,7 +757,9 @@ class BrowserView:
             new_menu = self._recreate_menus(self.menu)
             BrowserView.app.setMainMenu_(new_menu)
 
-            BrowserView.app.activateIgnoringOtherApps_(Foundation.YES)
+            # Only activate app if window is visible (avoid stealing focus when hidden)
+            if not self.hidden:
+                BrowserView.app.activateIgnoringOtherApps_(Foundation.YES)
             AppHelper.installMachInterrupt()
             BrowserView.app.run()
 
