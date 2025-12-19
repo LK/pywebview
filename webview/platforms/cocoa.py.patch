@@ -1,0 +1,1 @@
+Simplified mouseDown_ implementation - remove JS click synthesis, just disable drag
