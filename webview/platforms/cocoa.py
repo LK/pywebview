@@ -461,13 +461,60 @@ class BrowserView:
             window = self.window()
 
             if i.frameless and i.easy_drag:
-                windowFrame = window.frame()
-                if windowFrame is None:
-                    raise RuntimeError('Failed to obtain screen')
+                # Check if click is in a no-drag region
+                self._easy_drag_enabled = True
+                loc = event.locationInWindow()
+                # Convert to web coordinates (flip Y axis)
+                webview_frame = self.frame()
+                x = int(loc.x)
+                y = int(webview_frame.size.height - loc.y)
+                
+                # Check if element under cursor has pywebview-no-drag class
+                # or data-pywebview-drag-region="no-drag" attribute
+                js = f'''
+                (function() {{
+                    var el = document.elementFromPoint({x}, {y});
+                    while (el) {{
+                        var region = el.getAttribute('data-pywebview-drag-region');
+                        var hasNoDrag = el.classList && el.classList.contains('pywebview-no-drag');
+                        var hasDrag = el.classList && el.classList.contains('pywebview-drag-region');
+                        if (region === 'no-drag' || hasNoDrag) return 'no-drag';
+                        if (region === 'drag' || hasDrag) return 'drag';
+                        el = el.parentElement;
+                    }}
+                    return 'drag';
+                }})()
+                '''
+                
+                import time
+                result_holder = {'value': None, 'done': False}
+                
+                def handler(result, error):
+                    if result:
+                        result_holder['value'] = str(result)
+                    result_holder['done'] = True
+                
+                self.evaluateJavaScript_completionHandler_(js, handler)
+                
+                # Spin wait with run loop processing (allows callback to fire)
+                timeout = 0.1
+                start = time.time()
+                while not result_holder['done'] and (time.time() - start) < timeout:
+                    Foundation.NSRunLoop.currentRunLoop().runMode_beforeDate_(
+                        Foundation.NSDefaultRunLoopMode,
+                        Foundation.NSDate.dateWithTimeIntervalSinceNow_(0.001)
+                    )
+                
+                if result_holder['value'] == 'no-drag':
+                    self._easy_drag_enabled = False
+                else:
+                    windowFrame = window.frame()
+                    if windowFrame is None:
+                        raise RuntimeError('Failed to obtain screen')
 
-                self.initialLocation = window.convertBaseToScreen_(event.locationInWindow())
-                self.initialLocation.x -= windowFrame.origin.x
-                self.initialLocation.y -= windowFrame.origin.y
+                    self.initialLocation = window.convertBaseToScreen_(event.locationInWindow())
+                    self.initialLocation.x -= windowFrame.origin.x
+                    self.initialLocation.y -= windowFrame.origin.y
 
             super(BrowserView.WebKitHost, self).mouseDown_(event)
 
@@ -475,7 +522,7 @@ class BrowserView:
             i = BrowserView.get_instance('webview', self)
             window = self.window()
 
-            if i.frameless and i.easy_drag:
+            if i.frameless and i.easy_drag and getattr(self, '_easy_drag_enabled', True):
                 screenFrame = i.screen
                 if screenFrame is None:
                     raise RuntimeError('Failed to obtain screen')
