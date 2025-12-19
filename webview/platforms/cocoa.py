@@ -51,12 +51,23 @@ logger = logging.getLogger('pywebview')
 logger.debug('Using Cocoa')
 
 renderer = 'wkwebview'
+_activation_policy_set = False
+
+
+def _set_activation_policy():
+    """Set the activation policy based on _state['hide_dock_icon']."""
+    global _activation_policy_set
+    if not _activation_policy_set:
+        # 0 = NSApplicationActivationPolicyRegular (shows dock icon)
+        # 1 = NSApplicationActivationPolicyAccessory (no dock icon, no menu bar)
+        policy = 1 if _state.get('hide_dock_icon', False) else 0
+        BrowserView.app.setActivationPolicy_(policy)
+        _activation_policy_set = True
 
 
 class BrowserView:
     instances = {}
     app = AppKit.NSApplication.sharedApplication()
-    app.setActivationPolicy_(0)
     current_menu = None
 
     cascade_loc = Foundation.NSMakePoint(100.0, 0.0)
@@ -1406,6 +1417,7 @@ def create_window(window):
         browser.first_show()
 
     if window.uid == 'master':
+        _set_activation_policy()
         main_thread().pydev_do_not_trace = True  # vs code debugger hang fix
         create()
 

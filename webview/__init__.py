@@ -142,6 +142,7 @@ _state = ImmutableDict(
         'ssl': False,
         'icon': None,
         'menu': None,
+        'hide_dock_icon': False,
     }
 )
 
@@ -177,6 +178,7 @@ def start(
     server_args: dict[Any, Any] = {},
     ssl: bool = False,
     icon: str | None = None,
+    hide_dock_icon: bool = False,
 ):
     """
     Start a GUI loop and display previously created windows. This function must
@@ -203,6 +205,7 @@ def start(
     :param server_args: Dictionary of arguments to pass through to the server instantiation
     :param ssl: Enable SSL for local HTTP server. Default is False.
     :param icon: Path to the icon file. Supported only on GTK/QT.
+    :param hide_dock_icon: Hide the dock icon on macOS. Default is False.
     """
     global guilib, renderer
 
@@ -217,6 +220,7 @@ def start(
     _state['user_agent'] = user_agent
     _state['http_server'] = http_server
     _state['private_mode'] = private_mode
+    _state['hide_dock_icon'] = hide_dock_icon
 
     if icon:
         _state['icon'] = abspath(icon)
